@@ -47,7 +47,8 @@ namespace ipmi
         //file->readToBuf(0, sizeof(size), reinterpret_cast<char*>(&size));
         //read the values from the EEPROM using readToBuf
         char readarray[4];//initialize a character array
-        file->readToBuf(0,sizeof(readarray), reinterpret_cast<char*>(&readarray));//readToBuf function
+        //file->readToBuf(0,sizeof(readarray), reinterpret_cast<char*>(&readarray));//readToBuf function
+        file->readToBuf(0,sizeof(readarray), readarray);//readToBuf function
         //split and put the read values from buffer to the boot_count vector
         //boot_count[0] = readarray[0];
         //boot_count[1] = readarray[1];
