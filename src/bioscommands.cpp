@@ -42,7 +42,7 @@ namespace ipmi
         std::cout << "Araara " << " op is " << op << std::endl;
         // check the boot count file exist or not
         //create a object for the SysFileImpl with its path and offset
-        auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/",
+        auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/devices/4-0050/eeprom",
                                                             1000);
         //boost::endian::little_uint64_t size = 0;
         //file->readToBuf(0, sizeof(size), reinterpret_cast<char*>(&size));
