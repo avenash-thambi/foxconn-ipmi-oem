@@ -18,6 +18,8 @@
 #include <bioscommands.hpp>
 #include "sys_file_impl.hpp"
 #include <memory>
+#include <unistd.h>
+#include <boost/endian/arithmetic.hpp>
 
 namespace ipmi
 {
@@ -38,13 +40,28 @@ namespace ipmi
 
         op = reqParams[0] & 0b11;
         // check the boot count file exist or not
+        //create a object for the SysFileImpl with its path and offset
         auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/",
-                                                            255);
-        file->writeStr(0,1000);
-        boot_count.push_back(static_cast<uint8_t>(counter));
-        boot_count.push_back(static_cast<uint8_t>(counter >> 8));
-        boot_count.push_back(static_cast<uint8_t>(counter >> 16));
-        boot_count.push_back(static_cast<uint8_t>(counter >> 24));
+                                                            1000);
+        //boost::endian::little_uint64_t size = 0;
+        //file->readToBuf(0, sizeof(size), reinterpret_cast<char*>(&size));
+        //read the values from the EEPROM using readToBuf
+        char readarray[4];//initialize a character array
+        file->readToBuf(0,sizeof(readarray), reinterpret_cast<char*>(&readarray));//readToBuf function
+        //split and put the read values from buffer to the boot_count vector
+        //boot_count[0] = readarray[0];
+        //boot_count[1] = readarray[1];
+        //boot_count[2] = readarray[2];
+        //boot_count[3] = readarray[3];
+        boot_count.push_back(static_cast<uint8_t>(readarray[0]));
+        boot_count.push_back(static_cast<uint8_t>(readarray[1]));
+        boot_count.push_back(static_cast<uint8_t>(readarray[2]));
+        boot_count.push_back(static_cast<uint8_t>(readarray[3]));
+
+        //boot_count.push_back(static_cast<uint8_t>(counter));
+        //boot_count.push_back(static_cast<uint8_t>(counter >> 8));
+        //boot_count.push_back(static_cast<uint8_t>(counter >> 16));
+        //boot_count.push_back(static_cast<uint8_t>(counter >> 24));
         file->SysFileImpl::~SysFileImpl();
         if (op == OP_CODE_READ)
         {
@@ -69,6 +86,12 @@ namespace ipmi
                 boot_count.clear();
                 boot_count.insert(boot_count.begin(), reqParams.begin()+1, reqParams.end());
             }
+            //convert the boot_count vector from uint8 to string since the writeStr function 
+            //requires a const &string as an argument
+            std::string s(boot_count.begin(),boot_count.end());
+            //write into EEPROM
+
+            file->writeStr(s,0);
         }
         else
         {
