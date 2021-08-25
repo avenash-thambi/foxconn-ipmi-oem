@@ -39,6 +39,7 @@ namespace ipmi
         }
 
         op = reqParams[0] & 0b11;
+        std::cout << "Araara " << " op is " << op << std::endl;
         // check the boot count file exist or not
         //create a object for the SysFileImpl with its path and offset
         auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/",
@@ -49,6 +50,10 @@ namespace ipmi
         char readarray[4];//initialize a character array
         //file->readToBuf(0,sizeof(readarray), reinterpret_cast<char*>(&readarray));//readToBuf function
         file->readToBuf(0,sizeof(readarray), readarray);//readToBuf function
+        for(int i=0;i<4;i++)
+        {
+            std::cout << "Araara " << "readarray " << i << "is " << readarray[i];
+        }
         //split and put the read values from buffer to the boot_count vector
         //boot_count[0] = readarray[0];
         //boot_count[1] = readarray[1];
@@ -58,6 +63,10 @@ namespace ipmi
         boot_count.push_back(static_cast<uint8_t>(readarray[1]));
         boot_count.push_back(static_cast<uint8_t>(readarray[2]));
         boot_count.push_back(static_cast<uint8_t>(readarray[3]));
+        for(int i=0; i < boot_count.size(); i++)
+        {
+            std::cout << "Araara " << "boot_count " << i << "is " << boot_count[i] << std::endl;
+        }
 
         //boot_count.push_back(static_cast<uint8_t>(counter));
         //boot_count.push_back(static_cast<uint8_t>(counter >> 8));
@@ -87,9 +96,14 @@ namespace ipmi
                 boot_count.clear();
                 boot_count.insert(boot_count.begin(), reqParams.begin()+1, reqParams.end());
             }
+            for(int i=0; i < boot_count.size(); i++)
+            {
+               std::cout << "Araara " << "boot_count in write " << i << "is " << boot_count[i] << std::endl;
+            }
             //convert the boot_count vector from uint8 to string since the writeStr function 
             //requires a const &string as an argument
             std::string s(boot_count.begin(),boot_count.end());
+            std::cout << "Araara " << "string is " << s << std::endl;
             //write into EEPROM
 
             file->writeStr(s,0);
