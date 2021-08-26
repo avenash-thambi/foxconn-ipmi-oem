@@ -39,7 +39,6 @@ namespace ipmi
         }
 
         op = reqParams[0] & 0b11;
-        std::cout << "Araara " << " op is " << op << std::endl;
         //create a object for the SysFileImpl with its path and offset
         auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/devices/4-0050/eeprom",
                                                             1000);
