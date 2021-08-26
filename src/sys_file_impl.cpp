@@ -77,40 +77,6 @@ size_t SysFileImpl::readToBuf(size_t pos, size_t count, char* buf) const
     return bytesRead;
 }
 
-std::string SysFileImpl::readAsStr(size_t pos, size_t count) const
-{
-    std::string result;
-
-    /* If count is invalid, return an empty string. */
-    if (count == 0 || count > result.max_size())
-    {
-        return result;
-    }
-
-    result.resize(count);
-    size_t bytesRead = readToBuf(pos, count, result.data());
-    result.resize(bytesRead);
-    return result;
-}
-
-std::string SysFileImpl::readRemainingAsStr(size_t pos) const
-{
-    std::string result;
-    size_t bytesRead, size = 0;
-
-    /* Since we don't know how much to read, read 'rwBlockSize' at a time
-     * until there is nothing to read anymore. */
-    do
-    {
-        result.resize(size + rwBlockSize);
-        bytesRead = readToBuf(pos + size, rwBlockSize, result.data() + size);
-        size += bytesRead;
-    } while (bytesRead == rwBlockSize);
-
-    result.resize(size);
-    return result;
-}
-
 void SysFileImpl::writeStr(const std::string& data, size_t pos)
 {
     lseek(pos);

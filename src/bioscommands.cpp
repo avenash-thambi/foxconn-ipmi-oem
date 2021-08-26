@@ -40,39 +40,18 @@ namespace ipmi
 
         op = reqParams[0] & 0b11;
         std::cout << "Araara " << " op is " << op << std::endl;
-        // check the boot count file exist or not
         //create a object for the SysFileImpl with its path and offset
-        auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/",
+        auto file = std::make_unique<binstore::SysFileImpl>("/sys/bus/i2c/devices/4-0050/eeprom",
                                                             1000);
-        //boost::endian::little_uint64_t size = 0;
-        //file->readToBuf(0, sizeof(size), reinterpret_cast<char*>(&size));
-        //read the values from the EEPROM using readToBuf
-        char readarray[4];//initialize a character array
-        //file->readToBuf(0,sizeof(readarray), reinterpret_cast<char*>(&readarray));//readToBuf function
-        file->readToBuf(0,sizeof(readarray), readarray);//readToBuf function
-        for(int i=0;i<4;i++)
-        {
-            std::cout << "Araara " << "readarray " << i << "is " << readarray[i];
-        }
-        //split and put the read values from buffer to the boot_count vector
-        //boot_count[0] = readarray[0];
-        //boot_count[1] = readarray[1];
-        //boot_count[2] = readarray[2];
-        //boot_count[3] = readarray[3];
-        boot_count.push_back(static_cast<uint8_t>(readarray[0]));
-        boot_count.push_back(static_cast<uint8_t>(readarray[1]));
-        boot_count.push_back(static_cast<uint8_t>(readarray[2]));
-        boot_count.push_back(static_cast<uint8_t>(readarray[3]));
-        for(int i=0; i < boot_count.size(); i++)
-        {
-            std::cout << "Araara " << "boot_count " << i << "is " << boot_count[i] << std::endl;
-        }
-
-        //boot_count.push_back(static_cast<uint8_t>(counter));
-        //boot_count.push_back(static_cast<uint8_t>(counter >> 8));
-        //boot_count.push_back(static_cast<uint8_t>(counter >> 16));
-        //boot_count.push_back(static_cast<uint8_t>(counter >> 24));
-        file->SysFileImpl::~SysFileImpl();
+        boost::endian::little_uint32_t size = 0;
+        file->readToBuf(0, sizeof(size), reinterpret_cast<char*>(&size));
+        
+        //push the read boot count value from eeprom into the boot_count vector
+        boot_count.push_back(static_cast<uint8_t>(size));
+        boot_count.push_back(static_cast<uint8_t>(size >> 8));
+        boot_count.push_back(static_cast<uint8_t>(size >> 16));
+        boot_count.push_back(static_cast<uint8_t>(size >> 24));
+        
         if (op == OP_CODE_READ)
         {
             return ipmi::responseSuccess(boot_count);
@@ -96,16 +75,11 @@ namespace ipmi
                 boot_count.clear();
                 boot_count.insert(boot_count.begin(), reqParams.begin()+1, reqParams.end());
             }
-            for(int i=0; i < boot_count.size(); i++)
-            {
-               std::cout << "Araara " << "boot_count in write " << i << "is " << boot_count[i] << std::endl;
-            }
-            //convert the boot_count vector from uint8 to string since the writeStr function 
-            //requires a const &string as an argument
+            
+            //convert the boot_count vector from uint8 to string
             std::string s(boot_count.begin(),boot_count.end());
-            std::cout << "Araara " << "string is " << s << std::endl;
-            //write into EEPROM
-
+            
+            //write the data into EEPROM
             file->writeStr(s,0);
         }
         else

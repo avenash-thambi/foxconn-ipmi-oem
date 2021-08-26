@@ -29,8 +29,6 @@ class SysFileImpl : public SysFile
     SysFileImpl& operator=(SysFileImpl) = delete;
 
     size_t readToBuf(size_t pos, size_t count, char* buf) const override;
-    std::string readAsStr(size_t pos, size_t count) const override;
-    std::string readRemainingAsStr(size_t pos) const override;
     void writeStr(const std::string& data, size_t pos) override;
 
   private:
