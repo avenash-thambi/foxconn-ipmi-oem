@@ -13,15 +13,19 @@
 *     permission of FOXCONN/CESBG/CABG/SRD.                                     *
 *                                                                               *
 ********************************************************************************/
+#include <unistd.h>
 
-#pragma once
-#define BOOT_COUNT_READ    0x00
-#define BOOT_COUNT_WRITE   0x01
-#define BOOT_COUNT_CLEAR   0x02
-#define FII_CMD_BIOS_BOOT_COUNT 0x71
-#define FII_CMD_BIOS_BOOT_COUNT_LEN 5
-#define INITIAL_BOOT_COUNT_HEADER 0x00000001
-#define DEFAULT_VALUE 0xffffffff
-#define EEPROM_OFFSET 4096
+#define eeprom_offset 4096
 
-std::string EEPROM_PATH = "/sys/bus/i2c/devices/4-0050/eeprom";
+std::string eeprom_path = "/sys/bus/i2c/devices/4-0050/eeprom";
+
+std::system_error errnoException(const std::string& message);
+
+void sysopen(const std::string& path, size_t offset);
+
+void lseek(size_t pos);
+
+void readBin(void *ptr, size_t pos, size_t size);
+
+void writeBin(void *ptr, size_t pos, size_t size);
+
