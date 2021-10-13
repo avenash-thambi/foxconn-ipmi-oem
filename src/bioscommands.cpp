@@ -49,64 +49,69 @@ ipmi::RspType<uint32_t> FiiBIOSBootCount(boost::asio::yield_context yield,
     bios_boot_count boot;
     sysopen(EEPROM_PATH,EEPROM_OFFSET);
     readBin(&boot,0,sizeof(boot));
-    
+
     if (reqParams.empty())
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
                 " Fii bios cmd : command format error.");
         return ipmi::responseReqDataLenInvalid();
     }
-    boot_count_operation = reqParams[0];
-    if(boot_count_operation == BOOT_COUNT_READ &&
-            boot.header != INITIAL_BOOT_COUNT_HEADER &&
-            reqParams.size() == 1)
+    if(reqParams.size() == 1)
     {
-        boot.count = INITIAL_VALUE;
+        boot_count_operation = reqParams[0];
+        switch(boot_count_operation)
+        {
+            case BOOT_COUNT_READ:
+                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
+                {
+                    boot.count = INITIAL_VALUE;
+                }
+                break;
+            case BOOT_COUNT_INCREMENT:
+                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
+                {
+                    boot.header = INITIAL_BOOT_COUNT_HEADER;
+                    boot.count = START_BOOT_COUNT_VALUE;
+                    writeBin(&boot,0,sizeof(boot));
+                }
+                else if(boot.header == INITIAL_BOOT_COUNT_HEADER)
+                {
+                    boot.count = boot.count + 1;
+                    writeBin(&boot.count,4,sizeof(boot.count));
+                }
+                break;
+            case BOOT_COUNT_CLEAR:
+                boot.header = DEFAULT_VALUE;
+                boot.count = DEFAULT_VALUE;
+                writeBin(&boot,0,sizeof(boot));
+                break;
+            default:
+                return ipmi::responseInvalidFieldRequest();
+        }
     }
-    else if(boot_count_operation == BOOT_COUNT_READ &&
-            boot.header == INITIAL_BOOT_COUNT_HEADER &&
-            reqParams.size() == 1 )
+    else if(reqParams.size() == FII_CMD_BIOS_BOOT_COUNT_LEN)
     {
-    } 
-    else if(boot_count_operation == BOOT_COUNT_INCREMENT &&
-            boot.header != INITIAL_BOOT_COUNT_HEADER &&
-            reqParams.size() == 1)
-    {
-        boot.header = INITIAL_BOOT_COUNT_HEADER;
-        boot.count = START_BOOT_COUNT_VALUE;
-        writeBin(&boot,0,sizeof(boot));
-    }
-    else if(boot_count_operation == BOOT_COUNT_INCREMENT &&
-            boot.header == INITIAL_BOOT_COUNT_HEADER &&
-            reqParams.size() == 1)
-    {
-        boot.count = boot.count + 1;
-        writeBin(&boot.count,4,sizeof(boot.count));
-    }
-    else if (boot_count_operation == BOOT_COUNT_CLEAR &&
-            reqParams.size() == 1)
-    {
-        boot.header = DEFAULT_VALUE;
-        boot.count = DEFAULT_VALUE;
-        writeBin(&boot,0,sizeof(boot));
-    }
-    else if (boot_count_operation == BOOT_COUNT_SET &&
-                boot.header != INITIAL_BOOT_COUNT_HEADER &&
-                reqParams.size() == FII_CMD_BIOS_BOOT_COUNT_LEN)
-    {
-        memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
-        boot.header = INITIAL_BOOT_COUNT_HEADER;
-        writeBin(&boot,0,sizeof(boot));
-    }
-    else if (boot_count_operation == BOOT_COUNT_SET &&
-            boot.header == INITIAL_BOOT_COUNT_HEADER &&
-            reqParams.size() == FII_CMD_BIOS_BOOT_COUNT_LEN)
-    {
-        memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
-        writeBin(&boot.count,4,sizeof(boot.count));
+        switch(boot_count_operation)
+        {
+            case BOOT_COUNT_SET:
+                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
+                {
+                    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
+                    boot.header = INITIAL_BOOT_COUNT_HEADER;
+                    writeBin(&boot,0,sizeof(boot));
+                }
+                else
+                {
+                    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
+                    writeBin(&boot.count,4,sizeof(boot.count));
+                }
+                break;
+            default:
+                return ipmi::responseInvalidFieldRequest();
+        }
     }
     else
-        return ipmi::responseParmOutOfRange();
+       return ipmi::responseReqDataLenInvalid();
     return ipmi::responseSuccess(boot.count);
 }
 
@@ -120,4 +125,3 @@ void registerBIOSFunctions()
     return;
 }
 }
-
