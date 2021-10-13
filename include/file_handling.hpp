@@ -15,10 +15,6 @@
 ********************************************************************************/
 #include <unistd.h>
 
-#define eeprom_offset 4096
-
-std::string eeprom_path = "/sys/bus/i2c/devices/4-0050/eeprom";
-
 std::system_error errnoException(const std::string& message);
 
 void sysopen(const std::string& path, size_t offset);
