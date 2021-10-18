@@ -48,7 +48,14 @@ Request
 |0x00|Read boot count value
 |0x01|Increment boot count value
 |0x02|Clear boot count value to its default value
-|0x03|Byte3|Byte4|Byte5|Byte6|Set the boot count with given 4 byte value
+|0x03|Set the boot count with given 4 byte value
+
+|Byte(s) | Data
+|--------|-----
+|Byte 3|Byte 0 set value(operation 0x03)
+|Byte 4|Byte 1 set value(operation 0x03)
+|Byte 5|Byte 2 set value(operation 0x03)
+|Byte 6|Byte 3 set value(operation 0x03)
 
 Response
 
