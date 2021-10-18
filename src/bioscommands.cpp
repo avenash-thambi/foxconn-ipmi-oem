@@ -47,8 +47,8 @@ ipmi::RspType<uint32_t> FiiBIOSBootCount(boost::asio::yield_context yield,
         std::vector<uint8_t> reqParams)
 {
     bios_boot_count boot;
-    sysopen(EEPROM_PATH,EEPROM_OFFSET);
-    readBin(&boot,0,sizeof(boot));
+    int fd = sysopen(EEPROM_PATH,EEPROM_OFFSET);
+    readBin(fd,&boot,0,sizeof(boot));
 
     if (reqParams.empty())
     {
@@ -56,62 +56,66 @@ ipmi::RspType<uint32_t> FiiBIOSBootCount(boost::asio::yield_context yield,
                 " Fii bios cmd : command format error.");
         return ipmi::responseReqDataLenInvalid();
     }
-    if(reqParams.size() == 1)
+
+    boot_count_operation = reqParams[0];
+
+    switch(boot_count_operation)
     {
-        boot_count_operation = reqParams[0];
-        switch(boot_count_operation)
-        {
-            case BOOT_COUNT_READ:
-                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
-                {
-                    boot.count = INITIAL_VALUE;
-                }
-                break;
-            case BOOT_COUNT_INCREMENT:
-                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
-                {
-                    boot.header = INITIAL_BOOT_COUNT_HEADER;
-                    boot.count = START_BOOT_COUNT_VALUE;
-                    writeBin(&boot,0,sizeof(boot));
-                }
-                else if(boot.header == INITIAL_BOOT_COUNT_HEADER)
-                {
-                    boot.count = boot.count + 1;
-                    writeBin(&boot.count,4,sizeof(boot.count));
-                }
-                break;
-            case BOOT_COUNT_CLEAR:
-                boot.header = DEFAULT_VALUE;
-                boot.count = DEFAULT_VALUE;
-                writeBin(&boot,0,sizeof(boot));
-                break;
-            default:
-                return ipmi::responseInvalidFieldRequest();
-        }
+        case BOOT_COUNT_READ:
+        case BOOT_COUNT_INCREMENT:
+        case BOOT_COUNT_CLEAR:
+             if(reqParams.size() != OPERATION_BYTE_LENGTH)
+                return ipmi::responseReqDataLenInvalid();
+	     break;
+        case BOOT_COUNT_SET:
+             if(reqParams.size() != SET_BYTE_LENGTH)
+                return ipmi::responseReqDataLenInvalid();
+             break;
+        default:
+             return ipmi::responseInvalidFieldRequest();
     }
-    else if(reqParams.size() == FII_CMD_BIOS_BOOT_COUNT_LEN)
+
+    switch(boot_count_operation)
     {
-        switch(boot_count_operation)
-        {
-            case BOOT_COUNT_SET:
-                if(boot.header != INITIAL_BOOT_COUNT_HEADER)
-                {
-                    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
-                    boot.header = INITIAL_BOOT_COUNT_HEADER;
-                    writeBin(&boot,0,sizeof(boot));
-                }
-                else
-                {
-                    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
-                    writeBin(&boot.count,4,sizeof(boot.count));
-                }
-                break;
-            default:
-                return ipmi::responseInvalidFieldRequest();
-        }
+        case BOOT_COUNT_READ:
+            if(boot.header != BOOT_COUNT_HEADER)
+            {
+                boot.count = INITIAL_VALUE;
+            }
+            break;
+        case BOOT_COUNT_INCREMENT:
+            if(boot.header != BOOT_COUNT_HEADER)
+            {
+                boot.header = BOOT_COUNT_HEADER;
+                boot.count = START_BOOT_COUNT_VALUE;
+                writeBin(fd,&boot,0,sizeof(boot));
+            }
+            else
+            {
+                boot.count = boot.count + 1;
+                writeBin(fd,&boot.count,4,sizeof(boot.count));
+            }
+            break;
+        case BOOT_COUNT_CLEAR:
+            boot.header = DEFAULT_VALUE;
+            boot.count = DEFAULT_VALUE;
+            writeBin(fd,&boot,0,sizeof(boot));
+            break;
+        case BOOT_COUNT_SET:
+	    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
+            if(boot.header != BOOT_COUNT_HEADER)
+            {
+                boot.header = BOOT_COUNT_HEADER;
+                writeBin(fd,&boot,0,sizeof(boot));
+            }
+            else
+            {
+                writeBin(fd,&boot.count,4,sizeof(boot.count));
+            }
+            break;
     }
-    else
-       return ipmi::responseReqDataLenInvalid();
+
+    sysclose(fd);
     return ipmi::responseSuccess(boot.count);
 }
 

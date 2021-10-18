@@ -17,11 +17,13 @@
 
 std::system_error errnoException(const std::string& message);
 
-void sysopen(const std::string& path, size_t offset);
+int sysopen(const std::string& path, size_t offset);
 
-void lseek(size_t pos);
+void sysclose(int fd_);
 
-void readBin(void *ptr, size_t pos, size_t size);
+void lseek(int fd_, size_t pos);
 
-void writeBin(void *ptr, size_t pos, size_t size);
+void readBin(int fd_, void *ptr, size_t pos, size_t size);
+
+void writeBin(int fd_, void *ptr, size_t pos, size_t size);
 
