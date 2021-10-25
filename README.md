@@ -48,11 +48,9 @@ Request
 |0x02|Clear boot count value to its default value
 |0x03|Set the boot count with given 4 byte value
 
-|Byte(s) 2-5|32-bit Count value for 0x03 operation
-|-----------|-------------------------------------
+Byte(s) 2-5 - 32-bit Count value for 0x03 operation
 
 Response
-
 |Byte(s) |Value  |Data
 |--------|-------|----
 |0x00|--|Byte 0 of boot count
