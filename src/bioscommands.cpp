@@ -14,26 +14,13 @@
 *                                                                               *
 ********************************************************************************/
 
-#include <memory>
-#include <sys/stat.h>
-#include <iomanip>
 #include <ipmid/api.hpp>
-#include <ipmid/utils.hpp>
-#include <ipmid/message.hpp>
 #include <phosphor-logging/log.hpp>
 #include <sdbusplus/message/types.hpp>
 #include <bioscommands.hpp>
-#include <unistd.h>
 #include <boost/endian/arithmetic.hpp>
 #include <file_handling.hpp>
-#include <string.h>
-#include <fcntl.h>
-#include <ipmid/api.h>
-#include <cstdint>
-#include <cstdio>
-#include <functional>
 
-int boot_count_operation;
 struct bios_boot_count
 {
     uint32_t header;
@@ -46,10 +33,8 @@ static void registerBIOSFunctions() __attribute__((constructor));
 ipmi::RspType<uint32_t> FiiBIOSBootCount(boost::asio::yield_context yield,
         std::vector<uint8_t> reqParams)
 {
+    int boot_count_operation;
     bios_boot_count boot;
-    int fd = sysopen(EEPROM_PATH,EEPROM_OFFSET);
-    readBin(fd,&boot,0,sizeof(boot));
-
     if (reqParams.empty())
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -59,62 +44,50 @@ ipmi::RspType<uint32_t> FiiBIOSBootCount(boost::asio::yield_context yield,
 
     boot_count_operation = reqParams[0];
 
-    switch(boot_count_operation)
+    if((boot_count_operation == BOOT_COUNT_SET &&
+        reqParams.size() != SET_BYTE_LENGTH) ||
+        (boot_count_operation != BOOT_COUNT_SET &&
+         reqParams.size() != OPERATION_BYTE_LENGTH))
     {
-        case BOOT_COUNT_READ:
-        case BOOT_COUNT_INCREMENT:
-        case BOOT_COUNT_CLEAR:
-             if(reqParams.size() != OPERATION_BYTE_LENGTH)
-                return ipmi::responseReqDataLenInvalid();
-	     break;
-        case BOOT_COUNT_SET:
-             if(reqParams.size() != SET_BYTE_LENGTH)
-                return ipmi::responseReqDataLenInvalid();
-             break;
-        default:
-             return ipmi::responseInvalidFieldRequest();
+         return ipmi::responseReqDataLenInvalid();
+    }
+
+    if(boot_count_operation > BOOT_COUNT_SET)
+    {
+         return ipmi::responseInvalidCommand();
+    }
+
+    int fd = sysopen(EEPROM_PATH);
+    readBin(fd, EEPROM_OFFSET, &boot, sizeof(boot));
+
+    if(boot.header != BOOT_COUNT_HEADER)
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+                  "Boot count header is corrupted or missing. Initializing.");
+        boot.header = BOOT_COUNT_HEADER;
+        boot.count = INITIAL_VALUE;
+        writeBin(fd, EEPROM_OFFSET, &boot, sizeof(boot));
     }
 
     switch(boot_count_operation)
     {
         case BOOT_COUNT_READ:
-            if(boot.header != BOOT_COUNT_HEADER)
-            {
-                boot.count = INITIAL_VALUE;
-            }
             break;
         case BOOT_COUNT_INCREMENT:
-            if(boot.header != BOOT_COUNT_HEADER)
-            {
-                boot.header = BOOT_COUNT_HEADER;
-                boot.count = START_BOOT_COUNT_VALUE;
-                writeBin(fd,&boot,0,sizeof(boot));
-            }
-            else
-            {
-                boot.count = boot.count + 1;
-                writeBin(fd,&boot.count,4,sizeof(boot.count));
-            }
+            boot.count = boot.count + 1;
             break;
         case BOOT_COUNT_CLEAR:
-            boot.header = DEFAULT_VALUE;
-            boot.count = DEFAULT_VALUE;
-            writeBin(fd,&boot,0,sizeof(boot));
+            boot.count = INITIAL_VALUE;
             break;
         case BOOT_COUNT_SET:
-	    memcpy(&boot.count,&reqParams[1],sizeof(boot.count));
-            if(boot.header != BOOT_COUNT_HEADER)
-            {
-                boot.header = BOOT_COUNT_HEADER;
-                writeBin(fd,&boot,0,sizeof(boot));
-            }
-            else
-            {
-                writeBin(fd,&boot.count,4,sizeof(boot.count));
-            }
+            memcpy(&boot.count, &reqParams[1], sizeof(boot.count));
             break;
     }
 
+    if( boot_count_operation != BOOT_COUNT_READ )
+    {
+        writeBin(fd, EEPROM_OFFSET + 4, &boot.count, sizeof(boot.count));
+    } 
     sysclose(fd);
     return ipmi::responseSuccess(boot.count);
 }
@@ -125,7 +98,5 @@ void registerBIOSFunctions()
             FII_CMD_BIOS_BOOT_COUNT);
     ipmi::registerHandler(ipmi::prioOemBase, ipmi::netFnOemThree, FII_CMD_BIOS_BOOT_COUNT,
             ipmi::Privilege::User, FiiBIOSBootCount);
-
-    return;
 }
 }
